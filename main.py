@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 import faiss
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -7,7 +9,10 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import faiss
 import PyPDF2
 
-gemini_api_key = ""
+
+load_dotenv()
+
+gemini_api_key = os.getenv("GEMINI_API_KEY")
 
 
 def read_text_from_file(file_path):
