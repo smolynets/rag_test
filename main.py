@@ -5,6 +5,7 @@ from langchain_core.output_parsers import StrOutputParser
 from sentence_transformers import SentenceTransformer
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import faiss
+import PyPDF2
 
 gemini_api_key = ""
 
@@ -20,6 +21,32 @@ def read_text_from_file(file_path):
         return None
     except Exception as e:
         print(f"Помилка при зчитуванні файлу {file_path}: {e}")
+        return None
+
+def read_text_from_pdf(file_path):
+    try:
+        # Відкрити PDF-файл
+        with open(file_path, 'rb') as file:
+            # Створити PDF-читач
+            reader = PyPDF2.PdfReader(file)
+            
+            # Перевірити, чи файл не порожній
+            if len(reader.pages) == 0:
+                print(f"Файл {file_path} не містить сторінок.")
+                return None
+            
+            # Витягнути текст зі всіх сторінок PDF
+            text = ""
+            for page in reader.pages:
+                text += page.extract_text()
+            
+            print(f"Текст успішно зчитано з PDF-файлу: {file_path}")
+            return text
+    except FileNotFoundError:
+        print(f"Файл {file_path} не знайдено. Переконайтеся, що файл існує.")
+        return None
+    except Exception as e:
+        print(f"Помилка при зчитуванні PDF-файлу {file_path}: {e}")
         return None
 
 
@@ -63,7 +90,7 @@ def get_gemini_response(context_chunks, user_query):
     try:
         context = "\n".join(context_chunks)
         llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", api_key=gemini_api_key)
-        prompt_text = f"Контекст:\n{context}\nДай відповідь на запит: {user_query}"
+        prompt_text = f"Контекст:\n{context}\nДай відповідь на запит: {user_query}. Для кожної відповіді дай номер сторінки з інформацією звідки це взято!"
         prompt = ChatPromptTemplate.from_template(prompt_text)
         chain = prompt | llm | StrOutputParser()
         llm_response = chain.invoke({})
@@ -73,7 +100,8 @@ def get_gemini_response(context_chunks, user_query):
 
 
 def main(file_path, user_query):
-    long_text = read_text_from_file(file_path)
+    # long_text = read_text_from_file(file_path)
+    long_text = read_text_from_pdf(file_path)
     chunks = split_text_into_chunks(long_text)
     index, stored_chunks = store_chunks_in_faiss(chunks)
     if index is None:
@@ -89,7 +117,9 @@ def main(file_path, user_query):
 
 
 if __name__ == '__main__':
-    file_path = "book.txt"
+    # file_path = "book.txt"
+    file_path = "Інструкція-з-експлуатації-Renault-Fluence-та-Megane-3.pdf"
     user_query = ""
     response = main(file_path, user_query)
+    print("###################")
     print(response)
