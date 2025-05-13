@@ -91,6 +91,7 @@ def search_qdrant(query, model_name="all-MiniLM-L6-v2", top_k=5):
 
         # Збираємо релевантні чанки
         results = [hit.payload["content"] for hit in search_result]
+        #TODO: check vector search logic - its don't seach corect chunks now!!!
         return results
     except Exception as e:
         print(f"Помилка при пошуку в Qdrant: {e}")
@@ -151,7 +152,7 @@ def main(file_path, user_query):
 
 if __name__ == '__main__':
     file_path = "Інструкція-з-експлуатації-Renault-Fluence-та-Megane-3.pdf"
-    user_query = "яка місткість паливного бака"
+    user_query = ""
     response = main(file_path, user_query)
     print("###################")
     print(response)
