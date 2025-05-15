@@ -4,7 +4,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import PointStruct, VectorParams, Distance
 from sentence_transformers import SentenceTransformer
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-import PyPDF2
+import fitz
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -19,22 +19,22 @@ collection_name = "document_chunks"
 
 def read_text_from_pdf(file_path):
     try:
-        with open(file_path, 'rb') as file:
-            reader = PyPDF2.PdfReader(file)
-            if len(reader.pages) == 0:
-                print(f"Файл {file_path} не містить сторінок.")
-                return None
-            text = ""
-            for i, page in enumerate(reader.pages):
-                text += f"[Сторінка {i + 1}]" + "\n" + page.extract_text() + "\n"
-            print(f"Текст успішно зчитано з PDF-файлу: {file_path}")
-            return text
+        doc = fitz.open(file_path)
+        if doc.page_count == 0:
+            print(f"Файл {file_path} не містить сторінок.")
+            return None
+        text = ""
+        for i, page in enumerate(doc):
+            page_text = page.get_text("text")
+            text += f"[Сторінка {i + 1}]\n" + page_text + "\n"
+        print(f"Текст успішно зчитано з PDF-файлу: {file_path}")
+        return text
     except Exception as e:
         print(f"Помилка при зчитуванні PDF-файлу {file_path}: {e}")
         return None
 
 
-def split_text_into_chunks(text, chunk_size=500, chunk_overlap=50):
+def split_text_into_chunks(text, chunk_size=300, chunk_overlap=0):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     return text_splitter.split_text(text)
 
@@ -76,7 +76,7 @@ def store_chunks_in_qdrant(chunks, model_name="all-MiniLM-L6-v2"):
         return False
 
 
-def search_qdrant(query, model_name="all-MiniLM-L6-v2", top_k=5):
+def search_qdrant(query, model_name="all-MiniLM-L6-v2", top_k=30):
     try:
         model = SentenceTransformer(model_name)
         print(f"Генерація ембеддингу для запиту: '{query}'")
@@ -91,7 +91,6 @@ def search_qdrant(query, model_name="all-MiniLM-L6-v2", top_k=5):
 
         # Збираємо релевантні чанки
         results = [hit.payload["content"] for hit in search_result]
-        #TODO: check vector search logic - its don't seach corect chunks now!!!
         return results
     except Exception as e:
         print(f"Помилка при пошуку в Qdrant: {e}")
@@ -152,7 +151,7 @@ def main(file_path, user_query):
 
 if __name__ == '__main__':
     file_path = "Інструкція-з-експлуатації-Renault-Fluence-та-Megane-3.pdf"
-    user_query = ""
+    user_query = "Корисна місткість паливного бака"
     response = main(file_path, user_query)
     print("###################")
     print(response)
