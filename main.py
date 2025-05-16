@@ -116,6 +116,8 @@ def search_qdrant(query, model_name="multi-qa-mpnet-base-dot-v1", top_k=30):
 def get_gemini_response(context_chunks, user_query):
     try:
         context = "\n".join(context_chunks)
+        # Escape curly braces to avoid template variable errors
+        context = context.replace("{", "{{").replace("}", "}}")
         llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", api_key=gemini_api_key, temperature=0.0)
 
         messages = [
